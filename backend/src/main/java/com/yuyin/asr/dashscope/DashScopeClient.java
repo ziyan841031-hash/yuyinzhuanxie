@@ -24,6 +24,9 @@ public class DashScopeClient {
 
     private static final Logger log = LoggerFactory.getLogger(DashScopeClient.class);
 
+    /** 共享 HttpClient：线程安全、可承载大量 WebSocket，避免每次连接新建导致线程泄漏。 */
+    private static final HttpClient SHARED_HTTP = HttpClient.newHttpClient();
+
     /** 事件回调，由 AsrSession 实现。 */
     public interface Callbacks {
         void onStarted();
@@ -56,8 +59,7 @@ public class DashScopeClient {
             cb.onError("NO_API_KEY", "DASHSCOPE_API_KEY 未配置");
             return;
         }
-        HttpClient http = HttpClient.newHttpClient();
-        http.newWebSocketBuilder()
+        SHARED_HTTP.newWebSocketBuilder()
                 .header("Authorization", "bearer " + cfg.getApiKey())
                 .connectTimeout(Duration.ofMillis(cfg.getConnectTimeoutMs()))
                 .buildAsync(URI.create(cfg.getEndpoint()), new Listener())

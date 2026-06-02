@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yuyin.asr.common.Ids;
 import com.yuyin.asr.config.AsrProperties;
 import com.yuyin.asr.delivery.AnalysisDeliveryClient;
+import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -95,6 +96,14 @@ public class AsrWebSocketHandler extends AbstractWebSocketHandler {
         if (s != null) s.dispose();
         conns.remove(session.getId());
         log.info("client disconnected: {} ({})", session.getId(), status);
+    }
+
+    @PreDestroy
+    public void shutdown() {
+        // 优雅关闭：让各会话聚合器强制 flush 残余，再停调度器
+        sessions.values().forEach(AsrSession::dispose);
+        sessions.clear();
+        scheduler.shutdownNow();
     }
 
     private void sendPong(WebSocketSession session) {

@@ -3,6 +3,7 @@ package com.yuyin.asr.delivery;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yuyin.asr.config.AsrProperties;
 import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -59,12 +60,22 @@ public class DeliveryQueue {
     public void init() {
         try {
             Files.createDirectories(dir);
+            // 清理上次崩溃残留的半成品 .tmp 文件
+            try (Stream<Path> s = Files.list(dir)) {
+                s.filter(p -> p.getFileName().toString().endsWith(".tmp"))
+                        .forEach(p -> { try { Files.deleteIfExists(p); } catch (IOException ignored) {} });
+            }
         } catch (IOException e) {
             log.error("create delivery queue dir failed: {}", dir, e);
         }
         long period = Math.max(1000, cfg.getQueueFlushMs());
         scheduler.scheduleWithFixedDelay(this::flush, period, period, TimeUnit.MILLISECONDS);
         log.info("delivery queue ready at {} (flush every {}ms)", dir.toAbsolutePath(), period);
+    }
+
+    @PreDestroy
+    public void shutdown() {
+        scheduler.shutdownNow();
     }
 
     /** 落盘一条待重投的批（原子写：先写 .tmp 再 rename）。 */

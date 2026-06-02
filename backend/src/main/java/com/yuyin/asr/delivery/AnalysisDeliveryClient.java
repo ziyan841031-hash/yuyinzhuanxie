@@ -2,6 +2,7 @@ package com.yuyin.asr.delivery;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.yuyin.asr.config.AsrProperties;
+import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -85,5 +86,10 @@ public class AnalysisDeliveryClient {
 
     private void sleep(long ms) {
         try { Thread.sleep(ms); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+    }
+
+    @PreDestroy
+    public void shutdown() {
+        pool.shutdownNow();
     }
 }

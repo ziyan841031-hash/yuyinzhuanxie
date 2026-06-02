@@ -265,6 +265,7 @@ public class AsrSession {
             synchronized (stateLock) {
                 if (!active || stopping) return;
                 started = false;
+                if (current != null) current.close();   // 关闭已失效的旧连接，防悬挂
                 current = newClient();
                 current.connect();
             }
@@ -290,15 +291,22 @@ public class AsrSession {
     // ───── 结束 ─────
 
     private void endSession() {
+        endSession(false);
+    }
+
+    /** fatal=true 表示已上报致命错误，则不再发 done（避免前端 error 态被覆盖为 idle）。 */
+    private void endSession(boolean fatal) {
         if (ended) return;
         ended = true;
         cancel(rotateHandle);
         cancel(reconnectHandle);
         Aggregator a = aggregator;
         if (a != null) a.close();    // 强制 flush 残余
-        Map<String, Object> m = new LinkedHashMap<>();
-        m.put("type", "done");
-        send(m);
+        if (!fatal) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("type", "done");
+            send(m);
+        }
         if (current != null) { current.close(); current = null; }
         if (pendingNext != null) { pendingNext.close(); pendingNext = null; }
     }
@@ -310,7 +318,7 @@ public class AsrSession {
         m.put("message", message);
         send(m);
         active = false;
-        endSession();
+        endSession(true);
     }
 
     // ───── 音频缓冲 ─────

@@ -88,10 +88,13 @@ export function useAsrRecorder(config?: AggregatorConfig) {
     (sessionId: string) => {
       const socket = new AsrSocket(WS_URL, {
         onOpen: () => socket.start(sessionId, config),
-        onMessage: handleMessage,
+        // 仅处理当前 socket 的消息，丢弃重连前旧 socket 的滞留消息
+        onMessage: (msg) => {
+          if (socketRef.current === socket) handleMessage(msg);
+        },
         onClose: () => {
-          // 前端↔代理链路意外断开 → 退避重连（录音仍在进行）
-          if (shouldReconnectRef.current && recorderRef.current) {
+          // 仅当前 socket 意外断开才重连（录音仍在进行）
+          if (socketRef.current === socket && shouldReconnectRef.current && recorderRef.current) {
             scheduleReconnect();
           }
         },
