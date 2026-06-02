@@ -41,6 +41,9 @@ public class DashScopeClient {
     private volatile WebSocket ws;
     private volatile boolean started = false;
     private volatile boolean closed = false;
+    private volatile boolean finishing = false;
+
+    public boolean isStarted() { return started; }
 
     public DashScopeClient(AsrProperties.DashScope cfg, ObjectMapper mapper, Callbacks cb) {
         this.cfg = cfg;
@@ -105,6 +108,7 @@ public class DashScopeClient {
 
     /** 通知收尾。 */
     public void finish() {
+        finishing = true;
         WebSocket w = ws;
         if (w == null || closed) return;
         Map<String, Object> header = new LinkedHashMap<>();
@@ -198,7 +202,7 @@ public class DashScopeClient {
 
         @Override
         public CompletionStage<?> onClose(WebSocket webSocket, int statusCode, String reason) {
-            if (!closed) {
+            if (!closed && !finishing) {
                 log.warn("DashScope closed unexpectedly: {} {}", statusCode, reason);
                 cb.onError("WS_CLOSED", "code=" + statusCode + " reason=" + reason);
             }
@@ -207,6 +211,7 @@ public class DashScopeClient {
 
         @Override
         public void onError(WebSocket webSocket, Throwable error) {
+            if (closed || finishing) return;
             log.error("DashScope ws error", error);
             cb.onError("WS_ERROR", error.getMessage());
         }

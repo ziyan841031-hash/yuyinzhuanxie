@@ -1,5 +1,6 @@
 # Java / Maven
 backend/target/
+backend/data/
 *.class
 
 # Node / Vite

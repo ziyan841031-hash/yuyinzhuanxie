@@ -14,6 +14,9 @@ export type ServerMessage =
   | { type: 'partial'; text: string; beginTime: number; endTime: number }
   | { type: 'final'; sentenceId: number; text: string }
   | { type: 'flushed'; batchId: string; batchSeq: number; chars: number; triggeredBy: string }
+  | { type: 'reconnecting'; attempt: number }
+  | { type: 'reconnected' }
+  | { type: 'pong' }
   | { type: 'done' }
   | { type: 'error'; code: string; message: string };
 
@@ -26,13 +29,21 @@ export interface AsrSocketHandlers {
 
 export class AsrSocket {
   private ws: WebSocket | null = null;
+  private pingTimer: ReturnType<typeof setInterval> | null = null;
 
-  constructor(private url: string, private handlers: AsrSocketHandlers) {}
+  constructor(
+    private url: string,
+    private handlers: AsrSocketHandlers,
+    private heartbeatMs = 15000
+  ) {}
 
   connect(): void {
     this.ws = new WebSocket(this.url);
     this.ws.binaryType = 'arraybuffer';
-    this.ws.onopen = () => this.handlers.onOpen?.();
+    this.ws.onopen = () => {
+      this.startHeartbeat();
+      this.handlers.onOpen?.();
+    };
     this.ws.onmessage = (e) => {
       try {
         this.handlers.onMessage(JSON.parse(e.data) as ServerMessage);
@@ -40,8 +51,25 @@ export class AsrSocket {
         /* 忽略非 JSON */
       }
     };
-    this.ws.onclose = (e) => this.handlers.onClose?.(e);
+    this.ws.onclose = (e) => {
+      this.stopHeartbeat();
+      this.handlers.onClose?.(e);
+    };
     this.ws.onerror = (e) => this.handlers.onError?.(e);
+  }
+
+  private startHeartbeat(): void {
+    this.stopHeartbeat();
+    if (this.heartbeatMs > 0) {
+      this.pingTimer = setInterval(() => this.sendJson({ type: 'ping' }), this.heartbeatMs);
+    }
+  }
+
+  private stopHeartbeat(): void {
+    if (this.pingTimer) {
+      clearInterval(this.pingTimer);
+      this.pingTimer = null;
+    }
   }
 
   start(sessionId: string, config?: AggregatorConfig): void {
@@ -57,6 +85,7 @@ export class AsrSocket {
   }
 
   close(): void {
+    this.stopHeartbeat();
     this.ws?.close();
     this.ws = null;
   }

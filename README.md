@@ -47,8 +47,18 @@ npm run dev                                # http://localhost:5173 ，/ws 已代
 
 完整性保证：只在 `sentence_end` 定稿句处切批（不切半句）+ 批间 overlap 上下文 + 结束强制 flush。
 
+## 稳定性（M4）
+| 能力 | 说明 | 关键配置 |
+|---|---|---|
+| 代理↔DashScope 自动重连 | 断线退避重连，间隙音频缓冲后补发，聚合缓冲不丢；超过上限才上报致命错误 | `reconnect-base-ms` / `reconnect-max-ms` / `max-reconnect-attempts` / `audio-buffer-frames` |
+| 滚动会话 | 接近单任务时长上限前预启动新任务，就绪后无缝切换（overlap），防被动断流 | `session-max-seconds` |
+| 前端↔代理自动重连 | 前端链路断开后退避重连并继续送音频；用新 sessionId 防 batchId 冲突 | 前端 `MAX_RECONNECT` 等常量 |
+| 应用层心跳 | 前端每 15s `ping`，服务端 `pong`；DashScope 侧 `heartbeat=true` 静音保活 | `asr.dashscope.heartbeat` |
+| 投递持久化队列 | 内存快重试耗尽后落盘，进程重启自动续传，保证内容不丢；幂等键 `X-Batch-Id` | `queue-dir` / `queue-flush-ms` |
+| 并发安全发送 | `ConcurrentWebSocketSessionDecorator` 序列化多线程对同一连接的写 | — |
+
 ## 里程碑
 - [x] **M1** 打通链路 + 可配置聚合触发器 + 占位投递
-- [ ] M2/M3 更多触发补充与调优
-- [ ] M4 双链路重连、心跳、滚动会话、投递本地队列
+- [x] **M4** 双链路重连、心跳、滚动会话、投递磁盘队列
+- [ ] M2/M3 更多触发补充与调优（热词、语义标点等）
 - [ ] 对接真实分析后端（改 `asr.delivery.backend-url` 即可）

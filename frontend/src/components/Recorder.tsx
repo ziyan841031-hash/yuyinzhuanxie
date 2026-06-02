@@ -9,7 +9,11 @@ export function RecorderPanel() {
     silenceFlushMs: 1500,
   });
 
-  const active = status === 'recording' || status === 'connecting' || status === 'stopping';
+  const active =
+    status === 'recording' ||
+    status === 'connecting' ||
+    status === 'reconnecting' ||
+    status === 'stopping';
 
   return (
     <div style={{ maxWidth: 720, margin: '40px auto', fontFamily: 'system-ui, sans-serif' }}>
@@ -23,7 +27,7 @@ export function RecorderPanel() {
           <button
             onClick={() => void stop()}
             style={btn('#ff4d4f')}
-            disabled={status === 'connecting' || status === 'stopping'}
+            disabled={status === 'connecting' || status === 'reconnecting' || status === 'stopping'}
           >
             ⏹️ 停止
           </button>
@@ -41,6 +45,7 @@ function StatusBadge({ status }: { status: string }) {
     idle: '空闲',
     connecting: '连接中…',
     recording: '● 收音中',
+    reconnecting: '↻ 重连中…',
     stopping: '停止中…',
     error: '错误',
   };

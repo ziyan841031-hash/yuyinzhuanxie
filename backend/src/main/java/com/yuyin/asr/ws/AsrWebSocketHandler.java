@@ -13,6 +13,7 @@ import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.AbstractWebSocketHandler;
+import org.springframework.web.socket.handler.ConcurrentWebSocketSessionDecorator;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -33,6 +34,7 @@ public class AsrWebSocketHandler extends AbstractWebSocketHandler {
     private final AsrProperties props;
     private final AnalysisDeliveryClient delivery;
     private final Map<String, AsrSession> sessions = new ConcurrentHashMap<>();
+    private final Map<String, WebSocketSession> conns = new ConcurrentHashMap<>();
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(4, r -> {
         Thread t = new Thread(r, "asr-aggregator");
         t.setDaemon(true);
@@ -47,6 +49,8 @@ public class AsrWebSocketHandler extends AbstractWebSocketHandler {
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) {
+        // 装饰为并发安全会话：聚合/重连/心跳多线程写同一连接时序列化，避免 TEXT_PARTIAL_WRITING
+        conns.put(session.getId(), new ConcurrentWebSocketSessionDecorator(session, 5000, 256 * 1024));
         log.info("client connected: {}", session.getId());
     }
 
@@ -59,7 +63,8 @@ public class AsrWebSocketHandler extends AbstractWebSocketHandler {
                 case "start" -> {
                     String sid = root.path("sessionId").asText(Ids.sessionId());
                     AsrProperties.Aggregator override = parseOverride(root.path("config"));
-                    AsrSession s = new AsrSession(sid, session, mapper, props, scheduler, delivery);
+                    WebSocketSession conn = conns.getOrDefault(session.getId(), session);
+                    AsrSession s = new AsrSession(sid, conn, mapper, props, scheduler, delivery);
                     sessions.put(session.getId(), s);
                     s.start(override);
                 }
@@ -67,6 +72,7 @@ public class AsrWebSocketHandler extends AbstractWebSocketHandler {
                     AsrSession s = sessions.get(session.getId());
                     if (s != null) s.stop();
                 }
+                case "ping" -> sendPong(conns.getOrDefault(session.getId(), session));
                 default -> log.debug("unknown control type: {}", type);
             }
         } catch (Exception e) {
@@ -84,7 +90,15 @@ public class AsrWebSocketHandler extends AbstractWebSocketHandler {
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
         AsrSession s = sessions.remove(session.getId());
         if (s != null) s.dispose();
+        conns.remove(session.getId());
         log.info("client disconnected: {} ({})", session.getId(), status);
+    }
+
+    private void sendPong(WebSocketSession session) {
+        try {
+            if (session.isOpen()) session.sendMessage(new TextMessage("{\"type\":\"pong\"}"));
+        } catch (Exception ignored) {
+        }
     }
 
     /** 把前端 config 覆盖到默认聚合配置上（仅覆盖出现的字段）。 */

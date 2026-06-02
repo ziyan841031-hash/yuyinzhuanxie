@@ -16,6 +16,12 @@ asr:
     punctuation-prediction-enabled: true
     heartbeat: true
     connect-timeout-ms: 8000
+    # ── M4 稳定性 ──
+    session-max-seconds: 600        # 接近单任务上限前主动滚动重开任务，对前端无感
+    reconnect-base-ms: 1000
+    reconnect-max-ms: 16000
+    max-reconnect-attempts: 8
+    audio-buffer-frames: 200        # 重连/切换间隙音频缓冲帧上限
 
   # ───── 聚合触发器（全部可配置；前端 start 消息可按会话覆盖）─────
   aggregator:
@@ -33,6 +39,8 @@ asr:
     retry-base-ms: 1000
     connect-timeout-ms: 3000
     read-timeout-ms: 5000
+    queue-dir: ./data/delivery-queue   # 投递失败落盘目录(进程重启后自动续传)
+    queue-flush-ms: 10000
 
 logging:
   level:

@@ -34,6 +34,12 @@ public class AsrProperties {
         private boolean punctuationPredictionEnabled = true;
         private boolean heartbeat = true;
         private long connectTimeoutMs = 8000;
+        // ── M4 稳定性 ──
+        private long sessionMaxSeconds = 600;   // 接近单任务时长上限前主动滚动重开，<=0 关闭
+        private long reconnectBaseMs = 1000;     // 断线重连退避基数
+        private long reconnectMaxMs = 16000;     // 退避上限
+        private int maxReconnectAttempts = 8;    // 连续重连失败上限，超过则上报致命错误
+        private int audioBufferFrames = 200;     // 重连/切换间隙音频缓冲帧上限(约20s@100ms)
 
         public String getEndpoint() { return endpoint; }
         public void setEndpoint(String endpoint) { this.endpoint = endpoint; }
@@ -53,6 +59,16 @@ public class AsrProperties {
         public void setHeartbeat(boolean heartbeat) { this.heartbeat = heartbeat; }
         public long getConnectTimeoutMs() { return connectTimeoutMs; }
         public void setConnectTimeoutMs(long v) { this.connectTimeoutMs = v; }
+        public long getSessionMaxSeconds() { return sessionMaxSeconds; }
+        public void setSessionMaxSeconds(long v) { this.sessionMaxSeconds = v; }
+        public long getReconnectBaseMs() { return reconnectBaseMs; }
+        public void setReconnectBaseMs(long v) { this.reconnectBaseMs = v; }
+        public long getReconnectMaxMs() { return reconnectMaxMs; }
+        public void setReconnectMaxMs(long v) { this.reconnectMaxMs = v; }
+        public int getMaxReconnectAttempts() { return maxReconnectAttempts; }
+        public void setMaxReconnectAttempts(int v) { this.maxReconnectAttempts = v; }
+        public int getAudioBufferFrames() { return audioBufferFrames; }
+        public void setAudioBufferFrames(int v) { this.audioBufferFrames = v; }
     }
 
     /** 聚合触发器配置；同时作为前端按会话覆盖的载体。 */
@@ -99,6 +115,8 @@ public class AsrProperties {
         private long retryBaseMs = 1000;
         private int connectTimeoutMs = 3000;
         private int readTimeoutMs = 5000;
+        private String queueDir = "./data/delivery-queue";   // 投递失败落盘目录(防丢)
+        private long queueFlushMs = 10000;                    // 磁盘队列重试扫描间隔
 
         public String getBackendUrl() { return backendUrl; }
         public void setBackendUrl(String backendUrl) { this.backendUrl = backendUrl; }
@@ -110,5 +128,9 @@ public class AsrProperties {
         public void setConnectTimeoutMs(int v) { this.connectTimeoutMs = v; }
         public int getReadTimeoutMs() { return readTimeoutMs; }
         public void setReadTimeoutMs(int v) { this.readTimeoutMs = v; }
+        public String getQueueDir() { return queueDir; }
+        public void setQueueDir(String v) { this.queueDir = v; }
+        public long getQueueFlushMs() { return queueFlushMs; }
+        public void setQueueFlushMs(long v) { this.queueFlushMs = v; }
     }
 }
