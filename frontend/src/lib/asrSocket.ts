@@ -1,4 +1,15 @@
 // 与 Java 代理 /ws/asr 的 WebSocket 封装。
+
+/** 识别侧调优（按会话覆盖后端默认），留空则用 application.yml 配置。 */
+export interface RecognitionConfig {
+  maxSentenceSilence?: number;          // VAD 断句静音阈值(ms)
+  vocabularyId?: string;                // 热词表 ID
+  semanticPunctuationEnabled?: boolean; // 语义断句
+  disfluencyRemovalEnabled?: boolean;   // 顺滑(去口水词)
+  inverseTextNormalizationEnabled?: boolean; // ITN 规整
+  languageHints?: string[];             // 语种提示，如 ['zh','en']
+}
+
 export interface AggregatorConfig {
   charThreshold?: number;
   sentenceThreshold?: number;
@@ -7,6 +18,7 @@ export interface AggregatorConfig {
   maxBufferMs?: number;
   minCharsToFlush?: number;
   overlapSentences?: number;
+  recognition?: RecognitionConfig;
 }
 
 export type ServerMessage =

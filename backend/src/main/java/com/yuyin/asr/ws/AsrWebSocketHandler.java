@@ -15,6 +15,8 @@ import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.AbstractWebSocketHandler;
 import org.springframework.web.socket.handler.ConcurrentWebSocketSessionDecorator;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
@@ -63,10 +65,11 @@ public class AsrWebSocketHandler extends AbstractWebSocketHandler {
                 case "start" -> {
                     String sid = root.path("sessionId").asText(Ids.sessionId());
                     AsrProperties.Aggregator override = parseOverride(root.path("config"));
+                    AsrProperties.DashScope dsOverride = parseRecognitionOverride(root.path("config").path("recognition"));
                     WebSocketSession conn = conns.getOrDefault(session.getId(), session);
                     AsrSession s = new AsrSession(sid, conn, mapper, props, scheduler, delivery);
                     sessions.put(session.getId(), s);
-                    s.start(override);
+                    s.start(override, dsOverride);
                 }
                 case "stop" -> {
                     AsrSession s = sessions.get(session.getId());
@@ -112,6 +115,23 @@ public class AsrWebSocketHandler extends AbstractWebSocketHandler {
         if (cfg.has("maxBufferMs")) base.setMaxBufferMs(cfg.get("maxBufferMs").asLong());
         if (cfg.has("minCharsToFlush")) base.setMinCharsToFlush(cfg.get("minCharsToFlush").asInt());
         if (cfg.has("overlapSentences")) base.setOverlapSentences(cfg.get("overlapSentences").asInt());
+        return base;
+    }
+
+    /** 把前端 config.recognition 覆盖到默认识别参数上（仅覆盖出现的字段）。返回 null 表示无覆盖。 */
+    private AsrProperties.DashScope parseRecognitionOverride(JsonNode rec) {
+        if (rec == null || rec.isMissingNode() || !rec.isObject()) return null;
+        AsrProperties.DashScope base = props.getDashscope().copy();
+        if (rec.has("maxSentenceSilence")) base.setMaxSentenceSilence(rec.get("maxSentenceSilence").asInt());
+        if (rec.has("vocabularyId")) base.setVocabularyId(rec.get("vocabularyId").asText());
+        if (rec.has("semanticPunctuationEnabled")) base.setSemanticPunctuationEnabled(rec.get("semanticPunctuationEnabled").asBoolean());
+        if (rec.has("disfluencyRemovalEnabled")) base.setDisfluencyRemovalEnabled(rec.get("disfluencyRemovalEnabled").asBoolean());
+        if (rec.has("inverseTextNormalizationEnabled")) base.setInverseTextNormalizationEnabled(rec.get("inverseTextNormalizationEnabled").asBoolean());
+        if (rec.has("languageHints") && rec.get("languageHints").isArray()) {
+            List<String> hints = new ArrayList<>();
+            rec.get("languageHints").forEach(n -> hints.add(n.asText()));
+            base.setLanguageHints(hints);
+        }
         return base;
     }
 }

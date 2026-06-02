@@ -84,6 +84,22 @@ public class DashScopeClient {
         params.put("max_sentence_silence", cfg.getMaxSentenceSilence());
         params.put("punctuation_prediction_enabled", cfg.isPunctuationPredictionEnabled());
         params.put("heartbeat", cfg.isHeartbeat());
+        // M2/M3 调优：仅在显式配置时下发，未配置则用模型默认，避免被不支持的参数拒绝
+        if (cfg.getVocabularyId() != null && !cfg.getVocabularyId().isBlank()) {
+            params.put("vocabulary_id", cfg.getVocabularyId());
+        }
+        if (cfg.getSemanticPunctuationEnabled() != null) {
+            params.put("semantic_punctuation_enabled", cfg.getSemanticPunctuationEnabled());
+        }
+        if (cfg.getDisfluencyRemovalEnabled() != null) {
+            params.put("disfluency_removal_enabled", cfg.getDisfluencyRemovalEnabled());
+        }
+        if (cfg.getInverseTextNormalizationEnabled() != null) {
+            params.put("inverse_text_normalization_enabled", cfg.getInverseTextNormalizationEnabled());
+        }
+        if (cfg.getLanguageHints() != null && !cfg.getLanguageHints().isEmpty()) {
+            params.put("language_hints", cfg.getLanguageHints());
+        }
 
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("task_group", "audio");

@@ -31,9 +31,12 @@ npm run dev                                # http://localhost:5173 ，/ws 已代
 
 打开页面点「开始收音」，浏览器会请求麦克风权限（注意：getUserMedia 需 https 或 localhost）。
 
-## 聚合触发器（可配置）
-后端默认值在 `backend/src/main/resources/application.yml` 的 `asr.aggregator`；
-前端也可在 `start` 消息的 `config` 里按会话覆盖（见 `useAsrRecorder` 调用处）。
+## 配置怎么配
+**完整逐项说明见 [`docs/配置说明.md`](docs/配置说明.md)**（含默认值、调优场景、按会话覆盖示例）。下面是速览。
+
+三个配置来源：环境变量（仅 `DASHSCOPE_API_KEY`）→ `application.yml`（全局默认）→ 前端 `useAsrRecorder({...})`（按会话临时覆盖，即时生效）。
+
+聚合触发器 `asr.aggregator.*`（决定攒多少、何时送后端，`<=0` 关闭）：
 
 | 配置 | 含义 | 默认 |
 |---|---|---|
@@ -44,6 +47,16 @@ npm run dev                                # http://localhost:5173 ，/ws 已代
 | `maxBufferMs` | 最大滞留兜底（强制） | 15000 |
 | `minCharsToFlush` | 时间/停顿触发的最小批字数 | 10 |
 | `overlapSentences` | 批间上下文重叠句数 | 1 |
+
+识别调优 `asr.dashscope.*`（M2/M3，默认不下发，按需开）：`vocabularyId` 热词、`semanticPunctuationEnabled` 语义断句、`disfluencyRemovalEnabled` 顺滑去口水词、`inverseTextNormalizationEnabled` ITN 规整、`languageHints` 语种、`maxSentenceSilence` 断句静音阈值。
+
+按会话覆盖示例（前端）：
+```ts
+useAsrRecorder({
+  charThreshold: 300, silenceFlushMs: 1200,        // 聚合触发器
+  recognition: { vocabularyId: 'vocab-xxx', disfluencyRemovalEnabled: true }, // 识别参数
+});
+```
 
 完整性保证：只在 `sentence_end` 定稿句处切批（不切半句）+ 批间 overlap 上下文 + 结束强制 flush。
 
@@ -59,6 +72,6 @@ npm run dev                                # http://localhost:5173 ，/ws 已代
 
 ## 里程碑
 - [x] **M1** 打通链路 + 可配置聚合触发器 + 占位投递
+- [x] **M2/M3** 综合触发器 + 识别调优（热词/语义标点/顺滑/ITN/语种，可配置、可按会话覆盖）
 - [x] **M4** 双链路重连、心跳、滚动会话、投递磁盘队列
-- [ ] M2/M3 更多触发补充与调优（热词、语义标点等）
 - [ ] 对接真实分析后端（改 `asr.delivery.backend-url` 即可）

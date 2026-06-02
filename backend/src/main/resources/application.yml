@@ -12,10 +12,16 @@ asr:
     model: fun-asr-realtime
     sample-rate: 16000
     format: pcm
-    max-sentence-silence: 800               # VAD 断句静音阈值(ms)
-    punctuation-prediction-enabled: true
-    heartbeat: true
+    max-sentence-silence: 800               # VAD 断句静音阈值(ms)，越大越不易切碎长句
+    punctuation-prediction-enabled: true    # 自动加标点
+    heartbeat: true                         # 静音保活
     connect-timeout-ms: 8000
+    # ── M2/M3 识别调优（默认不下发，按需开启；不确定模型是否支持时保持注释）──
+    # vocabulary-id: ""                      # 热词表 ID(在百炼控制台创建)，提升专有名词/术语
+    # semantic-punctuation-enabled: false    # 语义断句(更自然句界)；与 VAD 断句二选一调试
+    # disfluency-removal-enabled: false      # 顺滑：去除“嗯/啊”等口水词
+    # inverse-text-normalization-enabled: true  # ITN：把“一百二十”规整为 120 等
+    # language-hints: [zh, en]               # 语种提示
     # ── M4 稳定性 ──
     session-max-seconds: 600        # 接近单任务上限前主动滚动重开任务，对前端无感
     reconnect-base-ms: 1000

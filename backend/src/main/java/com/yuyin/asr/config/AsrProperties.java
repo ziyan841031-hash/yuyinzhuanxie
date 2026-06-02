@@ -3,6 +3,9 @@ package com.yuyin.asr.config;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.NestedConfigurationProperty;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * 绑定 application.yml 中 asr.* 配置。
  * 聚合触发器在 {@link Aggregator} 内，前端可在 start 消息里按会话覆盖（见 AggregatorConfig）。
@@ -34,6 +37,12 @@ public class AsrProperties {
         private boolean punctuationPredictionEnabled = true;
         private boolean heartbeat = true;
         private long connectTimeoutMs = 8000;
+        // ── M2/M3 识别调优（null/空 表示不下发该参数，用模型默认）──
+        private String vocabularyId = "";                       // 热词表 ID，提升专有名词/术语识别
+        private Boolean semanticPunctuationEnabled = null;       // 语义断句(更自然的句界/标点)
+        private Boolean disfluencyRemovalEnabled = null;         // 顺滑：去除“嗯/啊”等口水词
+        private Boolean inverseTextNormalizationEnabled = null;  // ITN：数字/日期/单位规整
+        private List<String> languageHints = new ArrayList<>();  // 语种提示，如 [zh, en]
         // ── M4 稳定性 ──
         private long sessionMaxSeconds = 600;   // 接近单任务时长上限前主动滚动重开，<=0 关闭
         private long reconnectBaseMs = 1000;     // 断线重连退避基数
@@ -69,6 +78,41 @@ public class AsrProperties {
         public void setMaxReconnectAttempts(int v) { this.maxReconnectAttempts = v; }
         public int getAudioBufferFrames() { return audioBufferFrames; }
         public void setAudioBufferFrames(int v) { this.audioBufferFrames = v; }
+        public String getVocabularyId() { return vocabularyId; }
+        public void setVocabularyId(String v) { this.vocabularyId = v; }
+        public Boolean getSemanticPunctuationEnabled() { return semanticPunctuationEnabled; }
+        public void setSemanticPunctuationEnabled(Boolean v) { this.semanticPunctuationEnabled = v; }
+        public Boolean getDisfluencyRemovalEnabled() { return disfluencyRemovalEnabled; }
+        public void setDisfluencyRemovalEnabled(Boolean v) { this.disfluencyRemovalEnabled = v; }
+        public Boolean getInverseTextNormalizationEnabled() { return inverseTextNormalizationEnabled; }
+        public void setInverseTextNormalizationEnabled(Boolean v) { this.inverseTextNormalizationEnabled = v; }
+        public List<String> getLanguageHints() { return languageHints; }
+        public void setLanguageHints(List<String> v) { this.languageHints = v; }
+
+        /** 浅拷贝，供按会话覆盖识别参数用。 */
+        public DashScope copy() {
+            DashScope c = new DashScope();
+            c.endpoint = endpoint;
+            c.apiKey = apiKey;
+            c.model = model;
+            c.sampleRate = sampleRate;
+            c.format = format;
+            c.maxSentenceSilence = maxSentenceSilence;
+            c.punctuationPredictionEnabled = punctuationPredictionEnabled;
+            c.heartbeat = heartbeat;
+            c.connectTimeoutMs = connectTimeoutMs;
+            c.sessionMaxSeconds = sessionMaxSeconds;
+            c.reconnectBaseMs = reconnectBaseMs;
+            c.reconnectMaxMs = reconnectMaxMs;
+            c.maxReconnectAttempts = maxReconnectAttempts;
+            c.audioBufferFrames = audioBufferFrames;
+            c.vocabularyId = vocabularyId;
+            c.semanticPunctuationEnabled = semanticPunctuationEnabled;
+            c.disfluencyRemovalEnabled = disfluencyRemovalEnabled;
+            c.inverseTextNormalizationEnabled = inverseTextNormalizationEnabled;
+            c.languageHints = (languageHints == null) ? new ArrayList<>() : new ArrayList<>(languageHints);
+            return c;
+        }
     }
 
     /** 聚合触发器配置；同时作为前端按会话覆盖的载体。 */

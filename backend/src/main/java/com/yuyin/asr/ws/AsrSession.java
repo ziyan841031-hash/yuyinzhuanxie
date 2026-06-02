@@ -37,7 +37,7 @@ public class AsrSession {
     private final WebSocketSession client;
     private final ObjectMapper mapper;
     private final AsrProperties props;
-    private final AsrProperties.DashScope dsCfg;
+    private volatile AsrProperties.DashScope dsCfg;   // start 时可被按会话覆盖
     private final ScheduledExecutorService scheduler;
     private final AnalysisDeliveryClient delivery;
 
@@ -79,7 +79,8 @@ public class AsrSession {
 
     // ───── 生命周期 ─────
 
-    public void start(AsrProperties.Aggregator override) {
+    public void start(AsrProperties.Aggregator override, AsrProperties.DashScope dsOverride) {
+        if (dsOverride != null) this.dsCfg = dsOverride;
         AsrProperties.Aggregator aggCfg = (override != null) ? override : props.getAggregator().copy();
         this.aggregator = new Aggregator(sessionId, aggCfg, scheduler, payload -> {
             delivery.deliver(payload);
