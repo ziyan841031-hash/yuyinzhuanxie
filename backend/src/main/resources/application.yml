@@ -1,0 +1,39 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: asr-proxy
+
+asr:
+  dashscope:
+    endpoint: wss://dashscope.aliyuncs.com/api-ws/v1/inference/
+    api-key: ${DASHSCOPE_API_KEY:}          # 仅服务端，环境变量注入；绝不下发前端
+    model: fun-asr-realtime
+    sample-rate: 16000
+    format: pcm
+    max-sentence-silence: 800               # VAD 断句静音阈值(ms)
+    punctuation-prediction-enabled: true
+    heartbeat: true
+    connect-timeout-ms: 8000
+
+  # ───── 聚合触发器（全部可配置；前端 start 消息可按会话覆盖）─────
+  aggregator:
+    char-threshold: 200          # 字数阈值，<=0 关闭
+    sentence-threshold: 0        # 句数阈值，<=0 关闭
+    interval-ms: 8000            # 周期上报间隔，<=0 关闭
+    silence-flush-ms: 1500       # 停顿断点：无新定稿句超过该时长则切批，<=0 关闭
+    max-buffer-ms: 15000         # 最大滞留兜底，<=0 关闭
+    min-chars-to-flush: 10       # 时间/停顿触发时的最小批字数，避免碎批
+    overlap-sentences: 1         # 批间上下文重叠句数
+
+  delivery:
+    backend-url: http://localhost:8080/mock/analysis   # 占位后端，后续替换
+    max-retries: 5
+    retry-base-ms: 1000
+    connect-timeout-ms: 3000
+    read-timeout-ms: 5000
+
+logging:
+  level:
+    com.yuyin.asr: DEBUG
